@@ -7,8 +7,10 @@ import { useCart } from './CartContext';
 
 type Hit = AlgoliaHit & {
   name: string;
-  image: string;
-  price?: number;
+  primary_image: string;
+  price: {
+    value: number;
+  };
   brand?: string;
   objectID: string;
 };
@@ -18,7 +20,7 @@ function ItemComponent({ item }: { item: Hit }) {
     <article className="group bg-white border border-neutral-200 rounded-lg overflow-hidden hover:border-neutral-400 transition-all duration-300 hover:shadow-lg">
       <div className="aspect-square overflow-hidden">
         <img 
-          src={item.image} 
+          src={item.primary_image} 
           alt={item.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -33,8 +35,8 @@ function ItemComponent({ item }: { item: Hit }) {
             {item.name}
           </Link>
         </h2>
-        {item.price && (
-          <p className="text-sm text-neutral-500">${item.price}</p>
+        {item?.price?.value && typeof item.price.value === 'number' && (
+          <p className="text-sm text-neutral-500">${item.price.value.toFixed(2)}</p>
         )}
       </div>
     </article>
@@ -42,7 +44,7 @@ function ItemComponent({ item }: { item: Hit }) {
 }
 
 export function ChatWithRefineTool() {
-  const { addItem } = useCart();
+  const { addItem, items, totalItems, totalPrice } = useCart();
   return (
     <Chat
       agentId="ca91e49f-fbd7-4a0f-a53b-ded2dc5afb87"
@@ -59,10 +61,17 @@ export function ChatWithRefineTool() {
             const objectID = input.objectID as string | undefined;
             const quantity = (input.quantity as number | undefined) ?? 1;
             const hit =
-              input.item && input.item.objectID === objectID
+              input.item && 
+              input.item.objectID === objectID &&
+              input.item.primary_image // Ensure image is present
                 ? input.item
                 : null;
 
+                
+            if (hit && hit?.price && typeof hit.price.value !== 'number') {
+              hit.price.value = parseFloat(hit.price.value) || 0;
+            }
+            console.log('AddToCart Tool - input.item:', input.item, 'hit:', hit);
             // Stable click handler
             const handleAdd = React.useCallback(async () => {
               if (!objectID || !hit) return; // extra guard
@@ -72,9 +81,9 @@ export function ChatWithRefineTool() {
                 addItem({
                   objectID: hit.objectID,
                   name: hit.name,
-                  price: hit.price || 0,
+                  price: {value: hit.price.value || 0},
                   brand: hit.brand,
-                  image: hit.image,
+                  primary_image: hit.primary_image,
                 }, quantity);
                 
                 addToolResult({
@@ -156,7 +165,182 @@ export function ChatWithRefineTool() {
             }
           },
         },
-        algolia_search_index: {},
+        viewCart: {
+          layoutComponent: ({ message, addToolResult }) => {
+            const callId = message.toolCallId;
+            const sentRef = React.useRef(false);
+            
+            // Auto-return cart data to agent
+            React.useEffect(() => {
+              if (message.state === 'input-available' && !sentRef.current) {
+                addToolResult({
+                  toolCallId: callId,
+                  output: {
+                    itemCount: totalItems,
+                    totalPrice: totalPrice.toFixed(2),
+                    isEmpty: items.length === 0,
+                    items: items.map(item => ({
+                      name: item.name,
+                      quantity: item.quantity,
+                      price: item.price.value,
+                      objectID: item.objectID
+                    }))
+                  }
+                });
+                sentRef.current = true;
+              }
+            }, [message.state, callId, addToolResult]);
+            
+            switch (message.state) {
+              case 'input-streaming':
+                return <div>Checking your cart...</div>;
+                
+              case 'input-available':
+                return <div>Loading cart...</div>;
+                
+              case 'output-available':
+                return (
+                  <div className="border border-neutral-200 rounded-lg p-4 bg-neutral-50">
+                    {items.length === 0 ? (
+                      <p className="text-sm text-neutral-600 mb-3">Your cart is empty</p>
+                    ) : (
+                      <>
+                        <div className="text-sm mb-3">
+                          <p className="font-medium">{totalItems} {totalItems === 1 ? 'item' : 'items'} in cart</p>
+                          <p className="text-neutral-600">Total: ${totalPrice.toFixed(2)}</p>
+                        </div>
+                        <ul className="text-sm space-y-1 mb-3 text-neutral-700">
+                          {items.map(item => (
+                            <li key={item.objectID}>
+                              • {item.name} (x{item.quantity})
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    <Link
+                      to="/cart"
+                      className="inline-block px-4 py-2 bg-black text-white text-sm hover:bg-neutral-800 transition-colors rounded"
+                    >
+                      View Full Cart
+                    </Link>
+                  </div>
+                );
+                
+              case 'output-error':
+                return <div>Failed to load cart</div>;
+                
+              default:
+                return null;
+            }
+          }
+        },
+        algolia_search_index: {
+          layoutComponent: ({
+            message,
+            indexUiState,
+            setIndexUiState,
+            addToolResult,
+          }) => {
+            const [query, setQuery] = React.useState<string | null>(null);
+            const { results, status } = useInstantSearch();
+            const [topHits, setTopHits] = React.useState([]);
+            const sentRef = React.useRef<Set<string>>(new Set());
+            const callId = message.toolCallId;
+
+            const persistedItems = message.output?.items as any[] | undefined;
+
+            React.useEffect(() => {
+              if (message.state === 'input-available' && message.input?.query) {
+                const q = message.input.query;
+                setQuery(q);
+                setTopHits(null);
+                setIndexUiState((prev) => ({ ...prev, query: q }));
+              }
+            }, [message.state, message.input?.query, setIndexUiState]);
+
+            React.useEffect(() => {
+              if (!query) return;
+              if (status !== 'idle') return;
+              if (indexUiState?.query !== query) return;
+              if (sentRef.current.has(callId)) return;
+
+              const top3 = results.hits.slice(0, 3);
+              setTopHits(top3);
+
+              addToolResult({
+                toolCallId: message.toolCallId,
+                output: {
+                  query: query,
+                  count: top3.length,
+                  items: top3.map((h) => ({
+                    objectID: h.objectID,
+                    name: h.name,
+                    price: h.price.value,
+                    primary_image: h.primary_image,
+                  })),
+                },
+              });
+              setQuery(null);
+
+              sentRef.current.add(callId);
+            }, [
+              results,
+              status,
+              indexUiState?.query,
+              query,
+              callId,
+              addToolResult,
+            ]);
+
+            switch (message.state) {
+              case 'input-streaming':
+                return <div>Receiving Search Request...</div>;
+              case 'input-available':
+                return <div>Ran {query}</div>;
+              case 'output-error':
+                return <div>Search Failed</div>;
+              case 'output-available':
+                if (persistedItems) {
+                  return (
+                    <div>
+                      <div className="mb-2 text-sm opacity-70">
+                        Top results{query ? ` for “${query}”` : ''}:
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {persistedItems.map((item: any) => (
+                          <ItemComponent key={item.objectID} item={item} />
+                        ))}
+                        {persistedItems.length === 0 && (
+                          <div className="opacity-70">No results.</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+              default:
+                if (topHits) {
+                  return (
+                    <div>
+                      <div className="mb-2 text-sm opacity-70">
+                        Top results:
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {topHits.map((item: any) => (
+                          <ItemComponent key={item.objectID} item={item} />
+                        ))}
+                        {topHits.length === 0 && (
+                          <div className="opacity-70">No results.</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+            }
+          },
+        },
       }}
     />
   );

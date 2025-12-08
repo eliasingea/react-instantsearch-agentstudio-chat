@@ -3,9 +3,11 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 export interface CartItem {
   objectID: string;
   name: string;
-  price: number;
+  price: {
+    value: number;
+  };
   brand?: string;
-  image?: string;
+  primary_image?: string;
   quantity: number;
 }
 
@@ -59,7 +61,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + item.price.value * item.quantity, 0);
 
   return (
     <CartContext.Provider

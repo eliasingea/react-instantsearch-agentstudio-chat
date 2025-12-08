@@ -65,9 +65,9 @@ export function ProductPage() {
       {
         objectID: product.objectID,
         name: product.name,
-        price: product.price.value,
+        price: { value: product.price.value },
         brand: product.brand,
-        image: product.primary_image,
+        primary_image: product.primary_image,
       },
       quantity
     );
@@ -119,7 +119,7 @@ export function ProductPage() {
           <div className="space-y-4">
             <div className="aspect-[3/4] bg-neutral-100 overflow-hidden">
               <img
-                src={`https://${product.primary_image}`}
+                src={product.primary_image}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />

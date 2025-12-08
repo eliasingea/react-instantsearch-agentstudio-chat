@@ -10,8 +10,10 @@ import {
   ToggleRefinement,
   HierarchicalMenu,
   RangeInput,
+  EXPERIMENTAL_Autocomplete
 } from 'react-instantsearch';
 
+import { ALGOLIA_INDEX_NAME } from '../config/algolia';
 import { ChatWithRefineTool } from '../components/Chat';
 import { Panel } from '../components/Panel';
 import type { Hit } from 'instantsearch.js';
@@ -86,20 +88,6 @@ export default function SearchPage() {
 
             {/* Main Content */}
             <div className="flex-1">
-              {/* Search Bar */}
-              <div className="mb-12">
-                <SearchBox 
-                  placeholder="Search luxury items..." 
-                  classNames={{
-                    root: 'w-full',
-                    form: 'relative',
-                    input: 'w-full px-6 py-4 text-lg bg-white border border-neutral-300 focus:border-black focus:outline-none transition-colors tracking-wide',
-                    submit: 'absolute right-4 top-1/2 -translate-y-1/2',
-                    reset: 'absolute right-12 top-1/2 -translate-y-1/2',
-                  }}
-                />
-              </div>
-
               {/* Product Grid */}
               <Hits 
                 hitComponent={ProductCard}

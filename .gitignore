@@ -11,6 +11,7 @@ node_modules
 dist
 .parcel-cache
 *.local
+.package-lock.json
 
 # Editor directories and files
 .vscode

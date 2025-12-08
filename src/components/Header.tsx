@@ -1,6 +1,9 @@
 import { useCart } from './CartContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { EXPERIMENTAL_Autocomplete } from 'react-instantsearch';
+import { ALGOLIA_INDEX_NAME, ALGOLIA_INDEX_NAME_SUGGESTIONS } from '../config/algolia';
+import 'instantsearch.css/themes/satellite.css';
 
 interface Subcategory {
   label: string;
@@ -73,6 +76,7 @@ const CATEGORIES = {
 
 export function Header() {
   const { totalItems } = useCart();
+  const navigate = useNavigate();
 
   return (
     <header className="bg-black text-white">
@@ -88,6 +92,93 @@ export function Header() {
               <CategoryDropdown label="ACCESSORIES" category="Accessories" subcategories={CATEGORIES.accessories} />
             </nav>
           </div>
+          
+          {/* Search Bar */}
+          <div className="flex-1 max-w-xl mx-8">
+            <EXPERIMENTAL_Autocomplete
+              classNames={{
+                root: 'relative z-50',
+                item: 'px-4 py-3 hover:bg-neutral-50 cursor-pointer transition-colors border-b border-neutral-100 last:border-b-0',
+              }}
+              panelComponent={({ elements }) => (
+             <div className="">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Suggestions Column - Left */}
+                <div className="border-r border-gray-200 pr-4">
+                  {elements.suggestions}
+                </div>
+
+                {/* Products Column - Right */}
+                <div className="pl-4">
+                  {elements[ALGOLIA_INDEX_NAME]}
+                </div>
+              </div>
+            </div>
+              )}
+              indices={[
+                {
+                  indexName: ALGOLIA_INDEX_NAME,
+                  headerComponent: () => (
+                    <div className="px-4 py-2 bg-neutral-50 border-b border-neutral-200">
+                      <span className="text-xs uppercase tracking-wider text-neutral-500 font-medium">
+                        Products
+                      </span>
+                    </div>
+                  ),
+                  itemComponent: ({ item, onSelect }) => (
+                    <div 
+                      onClick={onSelect}
+                      className="flex items-center gap-4"
+                    >
+                      {item.primary_image && (
+                        <img 
+                          src={item.primary_image} 
+                          alt={item.name} 
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{item.name}</div>
+                        {item.brand && (
+                          <div className="text-xs text-neutral-500">{item.brand}</div>
+                        )}
+                      </div>
+                      {item.price?.value && (
+                        <div className="text-sm font-medium">${item.price.value}</div>
+                      )}
+                    </div>
+                  ),
+                  getURL: (item) => `/product/${item.objectID}`,
+                },
+              ]}
+              showSuggestions={{
+                indexName: ALGOLIA_INDEX_NAME_SUGGESTIONS,
+                getURL: (item) => `/?q=${item.query}`,
+                headerComponent: () => (
+                  <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+                    <span className="text-xs uppercase tracking-wider text-neutral-600 font-semibold">
+                      Suggestions
+                    </span>
+                  </div>
+                ),
+                itemComponent: ({ item, onSelect }) => (
+                  <div 
+                    onClick={onSelect}
+                    className="px-4 py-3 hover:bg-neutral-50 cursor-pointer transition-colors border-b border-neutral-100 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <span className="text-sm text-neutral-700">{item.query}</span>
+                    </div>
+                  </div>
+                ),
+              }}
+            />
+          </div>
+          
+          
           <div className="flex items-center space-x-6 text-sm">
             <button className="hover:text-neutral-300 transition-colors">ACCOUNT</button>
             <Link to="/cart" className="hover:text-neutral-300 transition-colors">

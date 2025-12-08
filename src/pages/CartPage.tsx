@@ -50,9 +50,9 @@ export function CartPage() {
                   to={`/product/${item.objectID}`}
                   className="w-32 h-32 flex-shrink-0 bg-neutral-100 overflow-hidden"
                 >
-                  {item.image && (
+                  {item.primary_image && (
                     <img
-                      src={item.image}
+                      src={item.primary_image}
                       alt={item.name}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                     />
@@ -74,7 +74,7 @@ export function CartPage() {
                       {item.name}
                     </Link>
                     <p className="text-sm text-neutral-600 mt-2">
-                      ${item.price.toFixed(2)}
+                      ${item.price.value.toFixed(2)}
                     </p>
                   </div>
 
@@ -111,7 +111,7 @@ export function CartPage() {
                 {/* Item Total */}
                 <div className="text-right">
                   <p className="text-base font-light">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ${(item.price.value * item.quantity).toFixed(2)}
                   </p>
                 </div>
               </div>
