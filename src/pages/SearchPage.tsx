@@ -10,7 +10,8 @@ import {
   ToggleRefinement,
   HierarchicalMenu,
   RangeInput,
-  EXPERIMENTAL_Autocomplete
+  EXPERIMENTAL_Autocomplete,
+  useSearchBox
 } from 'react-instantsearch';
 
 import { ALGOLIA_INDEX_NAME } from '../config/algolia';
@@ -19,6 +20,8 @@ import { Panel } from '../components/Panel';
 import type { Hit } from 'instantsearch.js';
 
 import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { AISearchSummary } from '../components/AiSearchSummary';
 
 export default function SearchPage() {
   const { category } = useParams<{ category: string }>();
@@ -88,6 +91,9 @@ export default function SearchPage() {
 
             {/* Main Content */}
             <div className="flex-1">
+              {/* AI Search Summary */}
+              <AISearchSummary />
+              
               {/* Product Grid */}
               <Hits 
                 hitComponent={ProductCard}
