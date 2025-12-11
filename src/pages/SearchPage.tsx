@@ -23,6 +23,12 @@ import { Link, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AISearchSummary } from '../components/AiSearchSummary';
 
+
+function VirtualSearchBox() {
+  useSearchBox();
+  return null;
+}
+
 export default function SearchPage() {
   const { category } = useParams<{ category: string }>();
   console.log('Category ID from params:', category);
@@ -46,7 +52,6 @@ export default function SearchPage() {
 
       <div className="max-w-[1600px] mx-auto px-8 py-12">
         <Configure hitsPerPage={12} filters={categoryFilter} />
-        
         {/* Chat Interface */}
         <div className="mb-12">
             <ChatWithRefineTool />
@@ -56,7 +61,7 @@ export default function SearchPage() {
             {/* Filters Sidebar */}
             <aside className="w-64 flex-shrink-0 hidden lg:block">
               <div className="sticky top-8 space-y-8">
-                <DynamicWidgets>
+                <DynamicWidgets facets={["*"]} maxValuesPerFacet={1000}>
                   <Panel header="Categories">
                     <HierarchicalMenu attributes={[
                       "hierarchical_categories.lvl0",
@@ -92,7 +97,7 @@ export default function SearchPage() {
             {/* Main Content */}
             <div className="flex-1">
               {/* AI Search Summary */}
-              <AISearchSummary />
+              {/* <AISearchSummary /> */}
               
               {/* Product Grid */}
               <Hits 

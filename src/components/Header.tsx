@@ -16,6 +16,8 @@ interface CategoryDropdownProps {
   subcategories: Subcategory[];
 }
 
+
+
 function CategoryDropdown({ label, category, subcategories }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -95,7 +97,13 @@ export function Header() {
           
           {/* Search Bar */}
           <div className="flex-1 max-w-xl mx-8">
-            <EXPERIMENTAL_Autocomplete
+             <EXPERIMENTAL_Autocomplete
+              placeholder="Search products..."
+              getSources={({ query }) => {
+                // Only return sources if there's actual query input
+                if (!query) return [];
+                return undefined as any; // Let default behavior take over when there is a query
+              }}
               classNames={{
                 root: 'relative z-50',
                 item: 'px-4 py-3 hover:bg-neutral-50 cursor-pointer transition-colors border-b border-neutral-100 last:border-b-0',
