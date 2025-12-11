@@ -97,7 +97,7 @@ export default function SearchPage() {
             {/* Main Content */}
             <div className="flex-1">
               {/* AI Search Summary */}
-              {/* <AISearchSummary /> */}
+              <AISearchSummary />
               
               {/* Product Grid */}
               <Hits 
